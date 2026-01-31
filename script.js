@@ -1,217 +1,141 @@
-
-
-
-let todoInput, addBtn, todoList, emptyMessage;
-let totalTasksEl, completedTasksEl, pendingTasksEl;
-
-
-if (document.getElementById('todoInput')) {
-    todoInput = document.getElementById('todoInput');
-    addBtn = document.getElementById('addBtn');
-    todoList = document.getElementById('todoList');
-    emptyMessage = document.getElementById('emptyMessage');
-    totalTasksEl = document.getElementById('totalTasks');
-    completedTasksEl = document.getElementById('completedTasks');
-    pendingTasksEl = document.getElementById('pendingTasks');
-}
-
-
-let todos = JSON.parse(localStorage.getItem('todos')) || [];
-
-
+// Simple To-Do App with Local Storage
 document.addEventListener('DOMContentLoaded', function() {
-  
-    const currentPage = window.location.pathname.split('/').pop();
+    // Check if we're on the to-do page
+    const todoInput = document.getElementById('todoInput');
+    if (!todoInput) return; // Not on to-do page
     
-    if (currentPage === 'todo.html' || currentPage === '') {
-        initTodoPage();
-    } else if (currentPage === 'contact.html') {
-        initContactPage();
+    // Get elements
+    const addBtn = document.getElementById('addBtn');
+    const todoList = document.getElementById('todoList');
+    const emptyMessage = document.getElementById('emptyMessage');
+    const totalTasksEl = document.getElementById('totalTasks');
+    const completedTasksEl = document.getElementById('completedTasks');
+    const pendingTasksEl = document.getElementById('pendingTasks');
+    
+    // Load todos from localStorage
+    let todos = JSON.parse(localStorage.getItem('todos')) || [];
+    
+    // Display todos
+    function renderTodos() {
+        todoList.innerHTML = '';
+        
+        if (todos.length === 0) {
+            emptyMessage.style.display = 'block';
+            return;
+        }
+        
+        emptyMessage.style.display = 'none';
+        
+        todos.forEach((todo, index) => {
+            const li = document.createElement('li');
+            li.className = 'todo-item';
+            if (todo.completed) li.classList.add('completed');
+            
+            li.innerHTML = `
+                <span class="todo-text">${todo.text}</span>
+                <div class="todo-actions">
+                    <button class="complete-btn" data-index="${index}">
+                        ${todo.completed ? 'Undo' : 'Complete'}
+                    </button>
+                    <button class="delete-btn" data-index="${index}">Delete</button>
+                </div>
+            `;
+            
+            todoList.appendChild(li);
+        });
+        
+        updateStats();
     }
-});
-
-
-function initTodoPage() {
- 
-    renderTodos();
-    updateStats();
     
-   
+    // Add new todo
+    function addTodo() {
+        const text = todoInput.value.trim();
+        if (!text) {
+            alert('Please enter a task!');
+            return;
+        }
+        
+        todos.push({
+            text: text,
+            completed: false,
+            id: Date.now()
+        });
+        
+        saveTodos();
+        todoInput.value = '';
+        renderTodos();
+    }
+    
+    // Save to localStorage
+    function saveTodos() {
+        localStorage.setItem('todos', JSON.stringify(todos));
+    }
+    
+    // Update statistics
+    function updateStats() {
+        const total = todos.length;
+        const completed = todos.filter(todo => todo.completed).length;
+        const pending = total - completed;
+        
+        totalTasksEl.textContent = total;
+        completedTasksEl.textContent = completed;
+        pendingTasksEl.textContent = pending;
+    }
+    
+    // Event delegation for buttons
+    todoList.addEventListener('click', function(e) {
+        if (e.target.classList.contains('complete-btn')) {
+            const index = e.target.dataset.index;
+            todos[index].completed = !todos[index].completed;
+            saveTodos();
+            renderTodos();
+        }
+        
+        if (e.target.classList.contains('delete-btn')) {
+            const index = e.target.dataset.index;
+            if (confirm('Delete this task?')) {
+                todos.splice(index, 1);
+                saveTodos();
+                renderTodos();
+            }
+        }
+    });
+    
+    // Event listeners
     addBtn.addEventListener('click', addTodo);
     todoInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            addTodo();
-        }
+        if (e.key === 'Enter') addTodo();
     });
     
-   
-    toggleEmptyMessage();
-}
-
-
-function initContactPage() {
-    const submitBtn = document.getElementById('submitContact');
-    const contactMessage = document.getElementById('contactMessage');
-    
-    if (submitBtn) {
-        submitBtn.addEventListener('click', function() {
-            const name = document.getElementById('name').value.trim();
-            const email = document.getElementById('email').value.trim();
-            const message = document.getElementById('message').value.trim();
-            
-            
-            if (!name || !email || !message) {
-                showMessage('Please fill in all fields.', 'error');
-                return;
-            }
-            
-            
-            
-            showMessage('Thank you for your message! We\'ll get back to you soon.', 'success');
-            
-           
-            document.getElementById('name').value = '';
-            document.getElementById('email').value = '';
-            document.getElementById('message').value = '';
-        });
-    }
-    
-    function showMessage(text, type) {
-        contactMessage.textContent = text;
-        contactMessage.className = 'message ' + type;
-        
-       
-        setTimeout(function() {
-            contactMessage.textContent = '';
-            contactMessage.className = 'message';
-        }, 5000);
-    }
-}
-
-
-function addTodo() {
-    const text = todoInput.value.trim();
-    
-    if (text === '') {
-        alert('Please enter a task!');
-        return;
-    }
-    
-   
-    const todo = {
-        id: Date.now(),
-        text: text,
-        completed: false,
-        createdAt: new Date().toISOString()
-    };
-    
-   
-    todos.push(todo);
-    
-    
-    saveTodos();
-    
-   
-    todoInput.value = '';
-    
-   
+    // Initial render
     renderTodos();
-    updateStats();
-    toggleEmptyMessage();
-    
-    
-    todoInput.focus();
-}
+});
 
-
-function renderTodos() {
+// Contact page functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const submitBtn = document.getElementById('submitContact');
+    if (!submitBtn) return;
     
-    todoList.innerHTML = '';
-    
-    
-    todos.forEach(todo => {
-        const li = document.createElement('li');
-        li.className = 'todo-item';
-        li.dataset.id = todo.id;
+    submitBtn.addEventListener('click', function() {
+        const name = document.getElementById('name').value.trim();
+        const email = document.getElementById('email').value.trim();
+        const message = document.getElementById('message').value.trim();
+        const contactMessage = document.getElementById('contactMessage');
         
-        if (todo.completed) {
-            li.classList.add('completed');
+        // Simple validation
+        if (!name || !email || !message) {
+            contactMessage.textContent = 'Please fill in all fields.';
+            contactMessage.className = 'message error';
+            return;
         }
         
-        li.innerHTML = `
-            <span class="todo-text">${todo.text}</span>
-            <div class="todo-actions">
-                <button class="complete-btn">${todo.completed ? 'Undo' : 'Complete'}</button>
-                <button class="delete-btn">Delete</button>
-            </div>
-        `;
+        // In a real app, you would send this data to a server
+        contactMessage.textContent = 'Thank you for your message!';
+        contactMessage.className = 'message success';
         
-      
-        const completeBtn = li.querySelector('.complete-btn');
-        const deleteBtn = li.querySelector('.delete-btn');
-        
-        completeBtn.addEventListener('click', () => toggleComplete(todo.id));
-        deleteBtn.addEventListener('click', () => deleteTodo(todo.id));
-        
-        todoList.appendChild(li);
+        // Clear the form
+        document.getElementById('name').value = '';
+        document.getElementById('email').value = '';
+        document.getElementById('message').value = '';
     });
-}
-
-
-function toggleComplete(id) {
-
-    const todoIndex = todos.findIndex(todo => todo.id === id);
-    
-    if (todoIndex !== -1) {
-        
-        todos[todoIndex].completed = !todos[todoIndex].completed;
-        
-       
-        saveTodos();
-        
-       
-        renderTodos();
-        updateStats();
-    }
-}
-
-
-function deleteTodo(id) {
-    if (confirm('Are you sure you want to delete this task?')) {
-      
-        todos = todos.filter(todo => todo.id !== id);
-        
-     
-        saveTodos();
-        
-     
-        renderTodos();
-        updateStats();
-        toggleEmptyMessage();
-    }
-}
-
-
-function saveTodos() {
-    localStorage.setItem('todos', JSON.stringify(todos));
-}
-
-
-function updateStats() {
-    const total = todos.length;
-    const completed = todos.filter(todo => todo.completed).length;
-    const pending = total - completed;
-    
-    totalTasksEl.textContent = total;
-    completedTasksEl.textContent = completed;
-    pendingTasksEl.textContent = pending;
-}
-
-
-function toggleEmptyMessage() {
-    if (todos.length === 0) {
-        emptyMessage.style.display = 'block';
-    } else {
-        emptyMessage.style.display = 'none';
-    }
-}
+});
